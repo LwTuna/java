@@ -1,0 +1,11 @@
+
+proc main() {
+    var f : int;
+    f := 1;
+    e(f);
+
+}
+
+proc e(x:int) {
+
+}

@@ -1,0 +1,39 @@
+	.import	printi
+	.import	printc
+	.import	readi
+	.import	readc
+	.import	exit
+	.import	time
+	.import	clearAll
+	.import	setPixel
+	.import	drawLine
+	.import	drawCircle
+	.import	_indexError
+
+	.code
+	.align	4
+	.export	main
+main:
+	sub	$29,$29,16
+	stw	$25,$29,8
+	add	$25,$29,16
+	stw	$31,$25,-12
+	add	$8,$25,-4
+	add	$9,$0,1
+	stw	$9,$8,0
+	add	$8,$25,-4
+	ldw	$8,$8,0
+	stw	$8,$29,0
+	jal	e
+	ldw	$31,$25,-12
+	ldw	$29,$29,8
+	add	$29,$29,16
+	jr	$31
+	.export	e
+e:
+	sub	$29,$29,4
+	stw	$25,$29,0
+	add	$25,$29,4
+	ldw	$29,$29,0
+	add	$29,$29,4
+	jr	$31

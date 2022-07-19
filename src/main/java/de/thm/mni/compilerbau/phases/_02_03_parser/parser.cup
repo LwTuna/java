@@ -1,0 +1,125 @@
+package de.thm.mni.compilerbau.phases._02_03_parser;
+
+import java.util.List;
+import java.util.LinkedList;
+import java_cup.runtime.*;
+import de.thm.mni.compilerbau.phases._01_scanner.Scanner;
+import de.thm.mni.compilerbau.absyn.*;
+import de.thm.mni.compilerbau.table.Identifier;
+import de.thm.mni.compilerbau.utils.SplError;
+import de.thm.mni.compilerbau.CommandLineOptions;
+
+parser code {:
+  public CommandLineOptions options = null;
+
+  public void syntax_error(Symbol currentToken) {
+    throw SplError.SyntaxError(new Position(currentToken.left, currentToken.right), ((Scanner)getScanner()).yytext());
+  }
+  
+  /**
+   * @return An empty list. (Uses LinkedList)
+   */
+  public static <E> List<E> nil() {
+      return new LinkedList<E>();
+  }
+  
+  /**
+   * Constructs a list from a head and a tail without modifying the tail (Uses LinkedList).
+   * Use this as a helper if you don't want to deal with constructing lists manually.
+   *
+   * @param head The head of the list
+   * @param tail The tail of the list
+   * @return A list containing the head element and all elements of tail
+   */
+  public static <E> List<E> cons(E head, List<E> tail) {
+    List<E> copy = new LinkedList(tail);
+    copy.add(0, head);
+    return copy;
+  }
+:}
+
+/* Terminals/Tokens */
+terminal LBRACK, RBRACK, LPAREN, RPAREN, LCURL, RCURL;         //Braces, parenthesis, brackets
+terminal LT, LE, GT, GE, NE, EQ;                               //Comparison operators
+terminal PLUS, MINUS, STAR, SLASH;                             //Arithmetic operators
+terminal ASGN, COMMA, COLON, SEMIC;                            //Other delimiters
+terminal TYPE, PROC, ARRAY, OF, REF, VAR, IF, ELSE, WHILE;     //Keywords
+
+terminal Identifier IDENT;    //Identifiers
+terminal Integer INTLIT;      //Integer literals
+
+/* Non-terminals */
+non terminal Program program;
+non terminal List<GlobalDeclaration> globalDeclarationList;
+non terminal GlobalDeclaration globalDeclaration;
+non terminal ProcedureDeclaration procedureDeclaration;
+non terminal Statement statement;
+non terminal WhileStatement whileStatement;
+non terminal IfStatement ifStatement;
+non terminal CompoundStatement compoundStatement;
+non terminal AssignStatement assignStatement;
+non terminal CallStatement callStatement;
+non terminal List<Statement> statementList;
+non terminal Expression expression;
+non terminal List<Expression> argList;
+non terminal List<Expression> argListPart;
+non terminal TypeDeclaration typeDeclaration;
+non terminal TypeExpression typeExpression;
+non terminal List<ParameterDeclaration> parameterList;
+non terminal List<ParameterDeclaration> parameterListPart;
+non terminal ParameterDeclaration parameter;
+non terminal Expression binaryExpression;
+non terminal Expression unaryExpression;
+non terminal VariableExpression variableExpression;
+non terminal EmptyStatement emptyStatement;
+non terminal Expression plusMinusExpression;
+non terminal Expression divMultiExpression;
+non terminal Expression primaryExpression;
+non terminal Variable variable;
+non terminal VariableDeclaration variableDeclaration;
+non terminal List<VariableDeclaration> variableDeclarationList;
+non terminal ArrayAccess arrayAccess;
+
+
+start with program;
+
+program ::= globalDeclarationList:decList {:RESULT = new Program(new Position(decListleft,decListright),decList);:};
+globalDeclarationList ::= globalDeclaration:dec globalDeclarationList:decList{:RESULT = cons(dec,decList);:}
+| {:RESULT = nil();:};
+globalDeclaration ::= procedureDeclaration:procDec {:RESULT = procDec;:} | typeDeclaration:typeDec {:RESULT = typeDec;:};
+typeDeclaration ::= TYPE:t IDENT:i EQ typeExpression:te SEMIC:s {:RESULT = new TypeDeclaration(new Position(tleft,sright),i,te);:};
+typeExpression ::= IDENT:i {:RESULT = new NamedTypeExpression(new Position(ileft,iright),i);:} | ARRAY:a LBRACK INTLIT:i RBRACK OF typeExpression:te {:RESULT = new ArrayTypeExpression(new Position(aleft,teright),i,te);:};
+procedureDeclaration ::= PROC IDENT:i LPAREN parameterList:pList RPAREN LCURL variableDeclarationList:vDecList statementList:stms RCURL {:RESULT = new ProcedureDeclaration(new Position(ileft,iright),i,pList,vDecList,stms);:};
+parameterList ::= parameterListPart:plp {:RESULT = plp;:} | {:RESULT = nil();:};
+parameterListPart ::= parameter:p COMMA parameterListPart:plp{:RESULT = cons(p,plp);:}|parameter:p{:RESULT = List.of(p);:};
+parameter ::=  IDENT:i COLON typeExpression:te {:RESULT = new ParameterDeclaration(new Position(ileft,iright),i,te,false);:}
+ | REF IDENT:i COLON typeExpression:te {:RESULT = new ParameterDeclaration(new Position(ileft,iright),i,te,true);:};
+variableDeclarationList ::= variableDeclaration:varDec  variableDeclarationList:varDecList {:RESULT = cons(varDec,varDecList);:} | {:RESULT = nil();:};
+variableDeclaration ::= VAR IDENT:i COLON typeExpression:te SEMIC {:RESULT = new VariableDeclaration(new Position(ileft,iright),i,te);:};
+
+//Statements
+statementList ::= statement:stm statementList:stmList {:RESULT = cons(stm,stmList);:} | {:RESULT = nil();:};
+statement ::= whileStatement:whStm {:RESULT = whStm;:} | ifStatement:ifStm {:RESULT = ifStm;:} | compoundStatement:compStm {:RESULT = compStm;:} | assignStatement:assignStm {:RESULT = assignStm;:} | callStatement:callStm {:RESULT = callStm;:} | emptyStatement:emptyStm {:RESULT = emptyStm;:};
+
+emptyStatement ::= SEMIC:s {:RESULT = new EmptyStatement(new Position(sleft,sright));:};
+whileStatement ::= WHILE LPAREN expression:expr RPAREN statement:stm {:RESULT = new WhileStatement(new Position(exprleft,exprright),expr,stm);:};
+ifStatement ::= IF LPAREN expression:exp RPAREN statement:ifStm ELSE statement:elseStm {:RESULT = new IfStatement(new Position(expleft,expright),exp,ifStm,elseStm);:}| IF LPAREN expression:exp RPAREN statement:ifStm {:RESULT = new IfStatement(new Position(expleft,expright),exp,ifStm,new EmptyStatement(Position.ERROR_POSITION));:};
+compoundStatement ::= LCURL statementList:stmList RCURL {:RESULT = new CompoundStatement(new Position(stmListleft,stmListright),stmList);:};
+assignStatement ::= variable:i ASGN expression:exp SEMIC {:RESULT = new AssignStatement(new Position(ileft,iright),i,exp);:};
+callStatement ::= IDENT:i LPAREN argList:aList RPAREN SEMIC {:RESULT = new CallStatement(new Position(ileft,iright),i,aList);:};
+
+argList ::=  argListPart:al {:RESULT = al;:}| {:RESULT = nil();:};
+argListPart ::= expression:exp {:RESULT = cons(exp,nil());:}|expression:exp COMMA argListPart:aList {:RESULT = cons(exp,aList);:};
+
+expression ::= binaryExpression:exp {:RESULT = exp;:};
+binaryExpression ::= plusMinusExpression:exp0 GT plusMinusExpression:exp1 {:RESULT = new BinaryExpression(new Position(exp0left,exp1right),BinaryExpression.Operator.GRT,exp0,exp1);:} | plusMinusExpression:exp0 LT plusMinusExpression:exp1 {:RESULT = new BinaryExpression(new Position(exp0left,exp1right),BinaryExpression.Operator.LST,exp0,exp1);:} | plusMinusExpression:exp0 GE plusMinusExpression:exp1 {:RESULT = new BinaryExpression(new Position(exp0left,exp1right),BinaryExpression.Operator.GRE,exp0,exp1);:} | plusMinusExpression:exp0 LE plusMinusExpression:exp1{:RESULT = new BinaryExpression(new Position(exp0left,exp1right),BinaryExpression.Operator.LSE,exp0,exp1);:} | plusMinusExpression:exp0 EQ plusMinusExpression:exp1 {:RESULT = new BinaryExpression(new Position(exp0left,exp1right),BinaryExpression.Operator.EQU,exp0,exp1);:} | plusMinusExpression:exp0 NE plusMinusExpression:exp1 {:RESULT = new BinaryExpression(new Position(exp0left,exp1right),BinaryExpression.Operator.NEQ,exp0,exp1);:} | plusMinusExpression:exp0 {:RESULT = exp0;:};
+plusMinusExpression ::= plusMinusExpression:exp0 PLUS divMultiExpression:exp1 {:RESULT = new BinaryExpression(new Position(exp0left,exp1right),BinaryExpression.Operator.ADD,exp0,exp1);:} | plusMinusExpression:exp0 MINUS divMultiExpression:exp1 {:RESULT = new BinaryExpression(new Position(exp0left,exp1right),BinaryExpression.Operator.SUB,exp0,exp1);:} | divMultiExpression:exp0 {:RESULT = exp0;:};
+divMultiExpression ::= divMultiExpression:exp0 STAR unaryExpression:exp1 {:RESULT = new BinaryExpression(new Position(exp0left,exp1right),BinaryExpression.Operator.MUL,exp0,exp1);:} | divMultiExpression:exp0 SLASH unaryExpression:exp1 {:RESULT = new BinaryExpression(new Position(exp0left,exp1right),BinaryExpression.Operator.DIV,exp0,exp1);:}| unaryExpression:exp0 {:RESULT = exp0;:};
+primaryExpression ::= variableExpression:exp{:RESULT = exp;:} | LPAREN plusMinusExpression:exp RPAREN{:RESULT = exp;:} | INTLIT:i {:RESULT = new IntLiteral(new Position(ileft,iright),i);:};
+variableExpression ::= variable:v{:RESULT = new VariableExpression(new Position(vleft,vright),v);:} ;
+variable ::= IDENT:i {:RESULT = new NamedVariable(new Position(ileft,iright),i);:}| arrayAccess:aa {:RESULT = aa;:};
+unaryExpression ::=  MINUS primaryExpression:priExp {:RESULT = new BinaryExpression(new Position(priExpleft,priExpright),BinaryExpression.Operator.SUB,new IntLiteral(new Position(priExpleft,priExpright),0),priExp);:} | primaryExpression:priExp {:RESULT = priExp;:};
+arrayAccess ::= variable:var LBRACK expression:index RBRACK {:RESULT = new ArrayAccess(new Position(varleft,varright),var,index);:};
+
+
+
