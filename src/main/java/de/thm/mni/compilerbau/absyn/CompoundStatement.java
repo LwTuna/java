@@ -15,15 +15,18 @@ import java.util.stream.Collectors;
 public class CompoundStatement extends Statement {
     public final List<Statement> statements;
 
+    public final List<VariableDeclaration> variables;
+
     /**
      * Creates a new node representing a compound statement.
      *
      * @param position   The position of the statement in the source code.
      * @param statements The list of statements that this statement combines.
      */
-    public CompoundStatement(Position position, List<Statement> statements) {
+    public CompoundStatement(Position position, List<Statement> statements, List<VariableDeclaration> variables) {
         super(position);
         this.statements = statements;
+        this.variables = variables;
     }
 
     @Override
@@ -33,6 +36,6 @@ public class CompoundStatement extends Statement {
 
     @Override
     public String toString() {
-        return formatAst("CompoundStatement", statements.toArray());
+        return formatAst("CompoundStatement", formatAst("Variables", variables.toArray()),formatAst("Body", statements.toArray()));
     }
 }

@@ -104,7 +104,7 @@ statement ::= whileStatement:whStm {:RESULT = whStm;:} | ifStatement:ifStm {:RES
 emptyStatement ::= SEMIC:s {:RESULT = new EmptyStatement(new Position(sleft,sright));:};
 whileStatement ::= WHILE LPAREN expression:expr RPAREN statement:stm {:RESULT = new WhileStatement(new Position(exprleft,exprright),expr,stm);:};
 ifStatement ::= IF LPAREN expression:exp RPAREN statement:ifStm ELSE statement:elseStm {:RESULT = new IfStatement(new Position(expleft,expright),exp,ifStm,elseStm);:}| IF LPAREN expression:exp RPAREN statement:ifStm {:RESULT = new IfStatement(new Position(expleft,expright),exp,ifStm,new EmptyStatement(Position.ERROR_POSITION));:};
-compoundStatement ::= LCURL statementList:stmList RCURL {:RESULT = new CompoundStatement(new Position(stmListleft,stmListright),stmList);:};
+compoundStatement ::= LCURL variableDeclarationList:varDecList statementList:stmList RCURL {:RESULT = new CompoundStatement(new Position(stmListleft,stmListright),stmList,varDecList);:};
 assignStatement ::= variable:i ASGN expression:exp SEMIC {:RESULT = new AssignStatement(new Position(ileft,iright),i,exp);:};
 callStatement ::= IDENT:i LPAREN argList:aList RPAREN SEMIC {:RESULT = new CallStatement(new Position(ileft,iright),i,aList);:};
 

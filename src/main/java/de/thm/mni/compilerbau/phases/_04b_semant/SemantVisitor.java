@@ -139,6 +139,7 @@ public class SemantVisitor extends DoNothingVisitor {
     }
 
     public void visit(CompoundStatement compoundStatement){
+
         for(Statement statement:compoundStatement.statements){
             statement.accept(this);
         }
